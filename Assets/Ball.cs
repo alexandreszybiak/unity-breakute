@@ -9,103 +9,30 @@ public class Ball : MonoBehaviour
 {
     private const float ppu = 16.0f;
 
-    private Vector2 velocity;
-    private float xRemainder, yRemainder;
-
-    private Sprite sprite;
-
-    private Tilemap wallTilemap;
-
-    [SerializeField] private Vector2 initialVelocity;
-    [SerializeField] private TileBase wallTile;
-
     void Start()
     {
-        wallTilemap = GameObject.Find("WallTilemap").GetComponent<Tilemap>();
-        var spriteRenderer = GetComponent<SpriteRenderer>();
-        sprite = spriteRenderer.sprite;
-        xRemainder = 0.0f;
-        yRemainder = 0.0f;
-        velocity = initialVelocity;
+
     }
 
     // Update is called once per frame
     void Update()
     {
-        MoveX(velocity.x);
-        MoveY(velocity.y);
     }
 
-    private bool OverlapTile(TileBase tile, Vector3 position)
+    void OnCollisionEnter2D(Collision2D collision)
     {
-        if (wallTilemap == null) return false;
+        Tilemap tilemap = collision.gameObject.GetComponent<Tilemap>();
 
-        var topleft = position - new Vector3(sprite.rect.width / 2, sprite.rect.height / 2, 0) / ppu;
-        var bottomright = position + new Vector3(sprite.rect.width / 2, sprite.rect.height / 2, 0) / ppu;
+        if (tilemap == null) return;
 
-        Vector3Int coord1 = wallTilemap.WorldToCell(topleft);
-        Vector3Int coord2 = wallTilemap.WorldToCell(bottomright);
-
-        BoundsInt area = new BoundsInt(coord1, coord2 - coord1 + Vector3Int.one);
-        TileBase[] tiles = new TileBase[area.size.x * area.size.y];
-        wallTilemap.GetTilesBlockNonAlloc(area, tiles);
-        for (int i = 0; i < tiles.Length; i++)
+        List<ContactPoint2D> contactPoints = new List<ContactPoint2D>();
+        
+        int count = collision.GetContacts(contactPoints);
+        
+        foreach (ContactPoint2D cp in contactPoints)
         {
-            if (tiles[i] == tile) return true;
+            tilemap.SetTile(tilemap.WorldToCell(new Vector3(cp.point.x, cp.point.y, 0)), null);
         }
-        return false;
+        
     }
-
-    private void MoveX(float amount)
-    {
-        xRemainder += amount;
-        int move = Mathf.RoundToInt(xRemainder);
-        if (move != 0)
-        {
-            xRemainder -= move;
-            int sign = Math.Sign(move);
-            while (move != 0)
-            {
-                if (!OverlapTile(wallTile, transform.position + new Vector3(sign, 0, 0) / ppu))
-                {
-                    transform.Translate(new Vector3(sign, 0, 0) / ppu);
-                    move -= sign;
-                }
-                else
-                {
-                    velocity.x *= -1.0f;
-                    break;
-                }
-
-            }
-        }
-
-    }
-
-    private void MoveY(float amount)
-    {
-        yRemainder += amount;
-        int move = Mathf.RoundToInt(yRemainder);
-        if (move != 0)
-        {
-            yRemainder -= move;
-            int sign = Math.Sign(move);
-            while (move != 0)
-            {
-                if (OverlapTile(wallTile, transform.position + new Vector3(0, sign, 0) / ppu))
-                {
-                    velocity.y *= -1.0f;
-                    break;
-                }
-                else
-                {
-                    transform.Translate(new Vector3(0, sign, 0) / ppu);
-                    move -= sign;
-                }
-
-            }
-        }
-
-    }
-
 }
